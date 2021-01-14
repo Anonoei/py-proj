@@ -27,6 +27,7 @@
 from os import system, name
 from time import sleep
 import re
+from graphics import *
 
 iCIDR = 0
 
@@ -36,7 +37,13 @@ def clear():
 	else:
 		_ = system("clear")
 
-NetworkBytes = []
+def pause():
+	if name == "nt":
+		_ = system("pause")
+	else:
+		input("Press any key to continue...")
+
+
 
 def MainMenu():
 	sErrMsg = ""
@@ -49,7 +56,7 @@ def MainMenu():
 		print("\t = 1) Subnetting                                         =")
 		print("\t = 2) CIDR to Network Mask / Network Mask to CIDR        =")
 		print("\t = 3) Network Summarization / Reverse Summarization      =")
-		print("\t =                                                       =")
+		print("\t = 4) Automatic Network Mapping                          =")
 		print("\t =                                                       =")
 		print("\t =                                                       =")
 		print("\t =                                                       =")
@@ -64,6 +71,8 @@ def MainMenu():
 			mCIDR_NM()
 		elif (sUsrInput == "3"):
 			mSummarization()
+		elif (sUsrInput == "4"):
+			mNetworkMapping()
 		else:
 			sErrMsg = ("That's not a valid option!")
 			continue
@@ -143,7 +152,7 @@ def mSubnetting():
 		print("\t = > Total Networks: \"" + str(NetNetworks) + "\"")
 		print("\t = > Subnet Mask:    \"" + str(NetSM) + "\"")
 		print("\t ===============================\n\n")
-		system("pause")
+		pause()
 		sErrMsg = ""
 	
 def mCIDR_NM():
@@ -190,7 +199,7 @@ def mCIDR_NM():
 		print("\t = > CIDR:    : /" + str(iCIDR))
 		print("\t = > Netmask: : " + str(iNetMask))
 		print("\t ==========\n\n")
-		system("pause")
+		pause()
 		sErrMsg = ""
 	
 	
@@ -226,7 +235,7 @@ def mSummarization():
 			print("\n\n\t =========================================================")
 			print("\t = > Summarized Network:\t " + str(sNetwork1))
 			print("\t ==========\n\n")
-			system("pause")
+			pause()
 		elif (re.search("^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$", sUsrInput)):
 			sString = re.split("\.|/", sUsrInput)
 			print("sString: \"" + str(sString) + "\".")
@@ -244,14 +253,342 @@ def mSummarization():
 			print("\t = > Minimum Net:\t " + str(sNetwork1))
 			print("\t = > Maximum Net:\t " + str(sNetwork2))
 			print("\t ==========\n\n")
-			system("pause")
+			pause()
 		else:
 			sErrMsg = ("\t ERR: That's not a valid input! \"" + sUsrInput + "\".")
 	
+def mNetworkMapping():
+	sErrMsg = ""
+	NetWin = GraphWin("Mapped Network", 1200, 800)
+	NetWin.setBackground("white")
+	MyRouterInfo = []
+	MyRouterInfo.append("Cisco RTR")
+	while (True):
+		clear()
+		print("\n\t" + sErrMsg)
+		print("\t =========================================================")
+		print("\t =           N E T W O R K   M A P P I N G               =")
+		print("\t =========================================================")
+		print("\t =  Examples:   Enter a router config file path          =")
+		print("\t =   Or Enter router config manually                     =")
+		print("\t =   load C:\\folder1\\rtrconf                             =")
+		print("\t =========================================================")
+		sUsrInput = input("\t = Enter an input > ")
+		if (sUsrInput.lower() == "exit"):
+			NetWin.close()
+			return
+		elif (sUsrInput.find("load") != -1):
+			print("User is loading file")
+			MapNetwork(NetWin, sUsrInput, "load")
+		else: # User is inputting config
+			MyRouterInfo = MapNetwork(NetWin, sUsrInput, "line")
+			print("mNM MyRouterInfo: " + str(MyRouterInfo))
+			
 	
+def MapNetwork(NetWin, command, rType):
+	print("Mapping network!")
+	lCommand = ""
+	lineNum = 0
+	lConfig = []
+	MyRouterInfo = ["Cisco RTR", "Non-Modular"]
+	MyRouterInterfaces = []
+	lInterfaceNumber = [0, 0]
+	# Default Width: 1200 / Default Height: 800
+	WinWidth = NetWin.getWidth()
+	WinHeight = NetWin.getHeight()
+	DefaultRouterWidth = 200
+	DefaultRouterHeight = 200
+	MyRouterWidth = 250
+	MyRouterHeight = 100
+	MyRouterIsModular = False
+	MyRouter = Rectangle(Point(WinWidth/2, WinHeight/2), Point(WinWidth/2, WinHeight/2))
+	MyRouterText = Text(Point((WinWidth/2), (WinHeight/2)), str(MyRouterInfo[0]))
+	MyRouterInt = Rectangle(Point(0,0), Point(0,0))
+	MyRouterIntText = Text(Point(0,0), "")
 	
+	lMyRouterIntSize = [50, 20, 5]
+	while (True):
+		if (rType == "load"):
+			if (lineNum == 0):
+				print("Attempting to load file!")
+				#lConfig = readlines
+			command = lConfig[lineNum]
+		elif (rType == "line"):
+			if (lineNum != 0):
+				command = input("\tEnter an input > ")
+				if (command.lower == "exit"):
+					return
+		elif (NetWin.isClosed()):
+			return
+		for item in NetWin.items[:]:
+			item.undraw()
+		NetWin.update()
+		lineNum += 1
+		sStr = ""
+		if (command.find("service") != -1):
+			return
+		elif (command.find("version") != -1): # Line is Version 
+			print("Found Version!")
+			sVer = command.split(" ")
+			MyRouterInfo.append("Version: " + str(sVer[1]))
+		elif (command.find("enable secret") != -1): # Line is Enable Secret
+			print("Found Secret Pwd!"),
+			sString = CalcMapPwdType(command)
+			MyRouterInfo.append(sString)
+		elif (command.find("enable password") != -1): # Line is Enable Password
+			print("Found password!")
+			sString = CalcMapPwdType(command)
+			MyRouterInfo.append(sString)
+		elif (command.find("hostname") != -1): # Line is setting hostname
+			print("Found hostname!")
+			lHN = command.split(" ")
+			MyRouterInfo.append("Hostname: " + lHN[1])
+		elif (command.find("username") != -1): # Line is creating User
+			print("Found user!")
+			lUsername = command.split(" ")
+			sUsr = lUsername[1]
+			sPriv = ""
+			sPwd = ""
+			if (lUsername[2] == "privilege"):
+				sPriv = "Privilege: " + lUsername[3]
+			if (lUsername[4] == "secret"):
+				sPwd = "Secret: "
+				if (lUsername[5] == "5"):
+					sPwd += "MD5"
+				elif (lUsername[5] == "7"):
+					sPwd += "Type 7"
+				elif (lUsername[5] == "9"):
+					sPwd += "Type 9"
+				else:
+					sPwd += lUsername[5]
+			elif (lUsername[4] == "password"):
+				sPwd = "Password: "
+				if (lUsername[5] == "5"):
+					sPwd += "MD5"
+				elif (lUsername[5] == "7"):
+					sPwd += "Type 7"
+				elif (lUsername[5] == "9"):
+					sPwd += "Type 9"
+				else:
+					sPwd += lUsername[5]
+			MyRouterInfo.append("User: " + sUsr + " " + sPriv + "\n" + sPwd)
+		elif (command.find("snmp-server community") != -1):
+			lSNMPComm = command.split(" ")
+			MyRouterInfo.append("SNMP Community: " + lSNMPComm[2])
+		elif (command.find("line") != -1):
+			print("Found line!")
+			lCommand = command
+			continue
+		elif (command.find("password") != -1): # Line is setting password for previous line creation command
+			if (lCommand.find("line") != -1): # if a previous command created a line
+				
+				print("Found line password!",)
+				lPwd = command.split(" ")
+				sPwd = ""
+				lLine = lCommand.split(" ")
+				lLineType = lLine[1]
+				sLineInfo = (lLineType.upper() + " " + lLine[2] + "-" + lLine[3])
+				print(sLineInfo)
+				sString = CalcMapPwdType(command)
+				MyRouterInfo.append(sLineInfo + " " + sString)
+			else:
+				print("Unknown Password command!")
+				continue
+		elif (command.find("interface") != -1): # Line is creating interface
+			print("Found Interface!",)
+			sIntType = ""
+			sIntNum = ""
+			iStartNum = 0
+			iEndNum = 0
+			# Find interface type
+			if (command.find("GigabitEthernet") != -1):
+				sIntType = "G"
+			elif (command.find("FastEthernet") != -1):
+				sIntType = "F"
+			elif (command.find("Ethernet") != -1):
+				sIntType = "E"
+			elif (command.find("Serial") != -1):
+				sIntType = "S"
+			else:
+				print("Unknown Interface Type!")
+				continue
+			# Find interface number
+			if (re.search("\d+/\d+(\.\d+)?$", command)): # Router is Modular and/or a sub interface
+				MyRouterIsModular = True
+				iStartNum = re.search("\d+/\d+(\.\d+)?$", command).start()
+				iEndNum = len(command)
+			elif (re.search("\d+$", command)): # Router is non-modular
+				if (MyRouterIsModular == False):
+					MyRouterIsModular = False
+				iStartNum = re.search("\d+$", command).start()
+				iEndNum = len(command)
+			else:
+				print("Unknown Interface Number!")
+				continue
+				
+			for index in range(iStartNum, iEndNum, 1):
+					sIntNum += str(command[index])
+			sInt = sIntType + sIntNum
+			print(sInt)
+			MyRouterInterfaces.append(sInt)
+		else:
+			print("Unknown command!")
+			continue
+		# Draw items to screen
+		if (len(MyRouterInterfaces) > 0):
+			lRouterSize = [MyRouterWidth, MyRouterHeight]
+			lWindowSize = [WinWidth, WinHeight]
+			lInterfaceNumber = [0,0]
+			for index in range(len(MyRouterInterfaces)):
+				lDrawInt = CalcIntDrawLocation(index, MyRouterInterfaces[index], lInterfaceNumber ,lMyRouterIntSize, lRouterSize, lWindowSize)
+				MyRouterInt = Rectangle(Point(lDrawInt[0], lDrawInt[1]), Point(lDrawInt[2], lDrawInt[3]))
+				MyRouterIntText = Text(Point(lDrawInt[0] + lMyRouterIntSize[0]/2, lDrawInt[1] + lMyRouterIntSize[1]/2), MyRouterInterfaces[index])
+				MyRouterText.setSize(8)
+				for num in range(len(lInterfaceNumber)):
+					lInterfaceNumber.pop()
+				lInterfaceNumber.append(lDrawInt[4])
+				lInterfaceNumber.append(lDrawInt[5])
+				if (len(lDrawInt) > 6): # IntDrawLocation returned new router width / height
+					MyRouterWidth += lDrawInt[6]
+					MyRouterHeight += lDrawInt[7]
+					print("whoa")
+				MyRouterInt.draw(NetWin)
+				MyRouterIntText.draw(NetWin)
+		if not (MyRouterHeight > (len(MyRouterInfo) * 25)):
+			MyRouterHeight = (len(MyRouterInfo) * 25)
+		if (MyRouterIsModular == True):
+			try:
+				MyRouterInfo.remove("Non-Modular")
+				MyRouterInfo.insert(1, "Modular")
+			except:
+				False
+		else:
+			try:
+				MyRouterInfo.remove("Modular")
+				MyRouterInfo.insert(1, "Non-Modular")
+			except:
+				False
+		for item in MyRouterInfo:
+			sStr += str(item) + "\n"
+		MyRouterText.setTextColor("black")
+		MyRouterText.setSize(10)
+		MyRouterText.setText(str(sStr))
+		MyRouterText.draw(NetWin)
+		
+		MyRouter = Rectangle(Point(WinWidth/2 - MyRouterWidth/2, WinHeight/2 - MyRouterHeight/2), Point(WinWidth/2 + MyRouterWidth/2, WinHeight/2 + MyRouterHeight/2))
+		MyRouter.draw(NetWin)
 	
+def CalcIntDrawLocation(intNum, sIntName, lIntNumbers, lIntSize, lRouterSize, lWindowSize):
+	# lIntSize = [IntWidth(50), IntHeight(20), IntDefaultDistance(5)]
+	# lRouterSize = [RouterWidth, RouterHeight]
+	# lWindowSize = [WindowWidth, WindowHeight]
+	lDrawLocation = []
+	iDefaultX = 0 # Default top left value (for separating E/F/G from S)
+	iDefaultY = 0
 	
+	iDrawTLx = 0 # Top Left corner of rectangle
+	iDrawTLy = 0
+	iDrawBRx = 0 # Bottom Right Corner of rectangle
+	iDrawBRy = 0
+	
+	iRouterWidth = -1 # For changing Router width
+	iRouterHeight = -1 # For changing Router height
+	
+	intNumMod = 0 # Stores how many numbers to subtract for the left side
+	bFitOnRight = True
+	bAddOnRight = True
+	iMaxHeight = -((((lIntSize[1] * 0) + (lIntSize[2]) * 0) - lRouterSize[1])/((lIntSize[1] + lIntSize[2])))
+	print("MaxHeight: " + str(iMaxHeight))
+	if (lIntNumbers[0] < iMaxHeight): # Interface can fit on right side
+		bFitOnRight = True
+		print("Interface can fit on right side!")
+	else:
+		bFitOnRight = False
+		print("Interface cannot fit on the right side")
+		if (lIntNumbers[1] >= iMaxHeight):
+			print("Cannot fit more interfaces!")
+			iRouterHeight = (lIntSize[1] + lIntSize[2]) * 2
+	
+	if ((bFitOnRight == True) and ((sIntName[0] == "E") or (sIntName[0] == "F") or (sIntName[0] == "G"))):
+		rTLx = (lWindowSize[0]/2 - lRouterSize[0]/2) # Router Top Left corner X
+		rTLy = (lWindowSize[1]/2 - lRouterSize[1]/2)
+		iDefaultX = ((rTLx + lRouterSize[0]) - lIntSize[0]) # Default Interface Top Left Corner X
+		iDefaultY = (rTLy) # Default Interface Top Left Corner Y
+	else:
+		print("Let's move that to the left")
+		if (bFitOnRight == True):
+			bAddOnRight = False
+			intNumMod = lIntNumbers[1]
+		else:
+			bAddOnRight = False
+			intNumMod = lIntNumbers[0]
+		rTLx = (lWindowSize[0]/2 - lRouterSize[0]/2) # Router Top Left corner X
+		rTLy = (lWindowSize[1]/2 - lRouterSize[1]/2)
+		iDefaultX = (rTLx) # Default Interface Top Left Corner X
+		iDefaultY = (rTLy) # Default Interface Top Left Corner Y
+				
+	iDrawTLx = (iDefaultX)
+	iDrawBRx = (iDefaultX + (lIntSize[0]))
+	if (intNum == 0): # If first interface, we don't want the default spacing
+		iDrawTLy = ((iDefaultY + ((lIntSize[1]) * ((intNum - intNumMod)))))
+		iDrawBRy = (iDefaultY + ((lIntSize[1]) * ((intNum + 1) - intNumMod)))
+	else:
+		iDrawTLy = ((iDefaultY + ((lIntSize[1]) * (intNum - intNumMod))) + (lIntSize[2] * (intNum - intNumMod)))
+		iDrawBRy = ((iDefaultY + ((lIntSize[1]) * ((intNum + 1) - intNumMod))) + (lIntSize[2] * (intNum - intNumMod)))
+		
+	"""
+		Returns in this order:
+		Top Left Corner X
+		Top Left Corner Y
+		Bottom Right Corner X
+		Bottom Right Corner Y
+		Total Right Side
+		Total Left Side
+		Can Include:
+		New Router Width
+		New Router Height
+	"""
+	lDrawLocation.append(iDrawTLx)
+	lDrawLocation.append(iDrawTLy)
+	lDrawLocation.append(iDrawBRx)
+	lDrawLocation.append(iDrawBRy)
+	if (bAddOnRight == True):
+		lDrawLocation.append(int(lIntNumbers[0]) + 1)
+		lDrawLocation.append(lIntNumbers[1])
+	else:
+		lDrawLocation.append(lIntNumbers[0])
+		lDrawLocation.append(int(lIntNumbers[1]) + 1)
+	if (iRouterHeight != -1):
+		lDrawLocation.append(0)
+		lDrawLocation.append(iRouterHeight)
+	print("iDrawLocation: " + str(lDrawLocation))
+	return lDrawLocation
+	
+def CalcMapPwdType(sCommand):
+	lCommand = sCommand.split(" ")
+	sNameIndex = 0
+	sTypeIndex = 1
+	sPwd = ""
+	sType = ""
+	if (lCommand[0] == "enable"):
+		sNameIndex = 1
+		sTypeIndex = 2
+		sType = "Enable "
+	if (lCommand[sNameIndex] == "password"):
+		sType += "Password: "
+	elif (lCommand[sNameIndex] == "secret"):
+		sType += "Secret: "
+	if (lCommand[sTypeIndex] == "5"):
+		sPwd = "MD5"
+	elif (lCommand[sTypeIndex] == "7"):
+		sPwd = "Type 7"
+	elif (lCommand[sTypeIndex] == "9"):
+		sPwd = "Type 9"
+	else:
+		sPwd = lCommand[sTypeIndex]
+		
+	rString = sType + sPwd
+	return rString
 	
 def Subnet(Network):
 	NetInfo = []
