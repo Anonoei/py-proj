@@ -27,7 +27,9 @@
 from os import system, name
 from time import sleep
 import re
-from graphics import *
+#from graphics import *
+import tkinter as tk
+from tkinter import filedialog
 
 iCIDR = 0
 
@@ -44,6 +46,9 @@ def pause():
 		input("Press any key to continue...")
 
 
+#====------------------------------------------------------------------====
+#=                        Begin Menu Functions
+#====------------------------------------------------------------------====
 
 def MainMenu():
 	sErrMsg = ""
@@ -82,16 +87,15 @@ def mSubnetting():
 	sErrMsg = ""
 	while (True):
 		clear()
-		sNetwork = ""
-		Network = ""
-		NetCIDR = ""
-		NetFirst = ""
-		NetLast = ""
-		NetBroadcast = ""
-		NetNext = ""
-		NetHosts = ""
-		NetNetworks = ""
-		NetSM = ""
+		sNetwork = ""	#	Network String
+		NetCIDR = ""		#	Stores Network CIDR
+		NetFirst = ""		#	Stores First Network
+		NetLast = ""		#	Stores Last Network
+		NetBroadcast = ""	#	Stores Network Broadcast
+		NetNext = ""		#	Stores Next Network
+		NetHosts = ""		#	Stores Total Hosts
+		NetNetworks = ""	#	Stores Total Networks
+		NetSM = ""			#	Stores Network Subnet Mask
 		print("\n\t" + sErrMsg)
 		print("\t =========================================================")
 		print("\t =                 S U B N E T T I N G                   =")
@@ -130,15 +134,15 @@ def mSubnetting():
 			sErrMsg = ("\t ERR: Invalid Input! \"" + sUsrInput + "\".")
 			continue
 		lNetwork = Subnet(sNetwork)
-		NetID = lNetwork[0]
-		NetFirst = lNetwork[1]
-		NetLast = lNetwork[2]
-		NetBroadcast = lNetwork[3]
-		NetNext = lNetwork[4]
-		NetHosts = lNetwork[5]
-		NetNetworks = lNetwork[6]
-		NetBV = lNetwork[7]
-		NetOctInt = lNetwork[8]
+		NetID = lNetwork[0]			#
+		NetFirst = lNetwork[1]		#
+		NetLast = lNetwork[2]		#
+		NetBroadcast = lNetwork[3]	#
+		NetNext = lNetwork[4]		#
+		NetHosts = lNetwork[5]		#
+		NetNetworks = lNetwork[6]	#
+		NetBV = lNetwork[7]			#
+		NetOctInt = lNetwork[8]		#
 		print("\n\n\t =========================================================")
 		print("\t = > Network:" + str(sNetwork) + "\tBV: " + str(NetBV) + "\tOct: " + str(NetOctInt))
 		print("\t ===========================================")
@@ -170,7 +174,7 @@ def mCIDR_NM():
 		sUsrInput = input("\t = Enter a Value > ")
 		if (sUsrInput.lower() == "exit"):
 			return
-		elif (re.search("^/\d{1,2}$", sUsrInput)): # Usr Inputted CIDR Value
+		elif (re.search("^/\d{1,2}$", sUsrInput)):	#	 Usr Inputted CIDR Value
 			sUsrInput = int((sUsrInput[1:]))
 			if ((sUsrInput <= 32) and (sUsrInput >= 0)):
 				iCIDR = sUsrInput
@@ -178,7 +182,7 @@ def mCIDR_NM():
 			else:
 				sErrMsg = ("\t ERR: Invalid CIDR value! \"" + sUsrInput[1] + "\".")
 				continue
-		elif (re.search("^(\d{1,3}\.){3}\d{1,3}$", sUsrInput)): # Usr Inputted Subnet Mask 
+		elif (re.search("^(\d{1,3}\.){3}\d{1,3}$", sUsrInput)):	#	Usr Inputted Subnet Mask 
 			sUsrInput.split(".")
 			iNM = []
 			for item in sUsrInput:
@@ -206,8 +210,8 @@ def mCIDR_NM():
 def mSummarization():
 	sErrMsg = ""
 	while (True):
-		sNetwork1 = ""
-		sNetwork2 = ""
+		sNetwork1 = ""	#	Stores Network 1 / Summarized Network
+		sNetwork2 = ""	#	Storres Network 2
 		clear()
 		print("\n\t" + sErrMsg)
 		print("\t =========================================================")
@@ -259,19 +263,16 @@ def mSummarization():
 	
 def mNetworkMapping():
 	sErrMsg = ""
-	NetWin = GraphWin("Mapped Network", 1200, 800)
+	NetWin = GraphWin("Mapped Network", 1200, 800)	#	Create graphics.py instance
 	NetWin.setBackground("white")
-	MyRouterInfo = []
-	MyRouterInfo.append("Cisco RTR")
 	while (True):
 		clear()
 		print("\n\t" + sErrMsg)
 		print("\t =========================================================")
 		print("\t =           N E T W O R K   M A P P I N G               =")
 		print("\t =========================================================")
-		print("\t =  Examples:   Enter a router config file path          =")
-		print("\t =   Or Enter router config manually                     =")
-		print("\t =   load C:\\folder1\\rtrconf                             =")
+		print("\t =  Examples: Type 'load' to load file                   =")
+		print("\t =   Or Enter router config line by line                 =")
 		print("\t =========================================================")
 		sUsrInput = input("\t = Enter an input > ")
 		if (sUsrInput.lower() == "exit"):
@@ -279,17 +280,31 @@ def mNetworkMapping():
 			return
 		elif (sUsrInput.find("load") != -1):
 			print("User is loading file")
-			MapNetwork(NetWin, sUsrInput, "load")
+			FilePath = filedialog.askopenfilename()
+			MapNetwork(NetWin, FilePath, True)
+			pause()
 		else: # User is inputting config
-			MyRouterInfo = MapNetwork(NetWin, sUsrInput, "line")
+			MapNetwork(NetWin, sUsrInput, False)
 			print("mNM MyRouterInfo: " + str(MyRouterInfo))
 			
 	
+	
+	
+#====------------------------------------------------------------------====
+#=                        Begin Back-end Functions
+#====------------------------------------------------------------------====
+	
+	
+#=---------------------=
+#=-   Map Network
+#=---------------------=
 def MapNetwork(NetWin, command, rType):
 	print("Mapping network!")
 	lCommand = ""
-	lineNum = 0
 	lConfig = []
+	iConfigSize = 0
+	lineNum = 0		#	Stores Current Line Number
+	pCommandUnk = False
 	MyRouterInfo = ["Cisco RTR", "Non-Modular"]
 	MyRouterInterfaces = []
 	lInterfaceNumber = [0, 0]
@@ -308,25 +323,40 @@ def MapNetwork(NetWin, command, rType):
 	
 	lMyRouterIntSize = [50, 20, 5]
 	while (True):
-		if (rType == "load"):
+		if (rType == True):
 			if (lineNum == 0):
 				print("Attempting to load file!")
-				#lConfig = readlines
-			command = lConfig[lineNum]
-		elif (rType == "line"):
+				ConfFile = open(command, 'r')
+				lConfig = ConfFile.readlines()
+				command = lConfig[0]
+				iConfigSize = len(lConfig)
+				print("ConfigSize: " + str(iConfigSize) + "\t LineNum: " + str(lineNum))
+			else:
+				if (iConfigSize == lineNum):
+					print("Finished Reading File!")
+					
+					pause()
+					return
+				else:
+					command = lConfig[lineNum]
+		elif (rType == False):
 			if (lineNum != 0):
 				command = input("\tEnter an input > ")
 				if (command.lower == "exit"):
 					return
+		
 		elif (NetWin.isClosed()):
 			return
-		for item in NetWin.items[:]:
-			item.undraw()
-		NetWin.update()
+		if (pCommandUnk == False):
+			for item in NetWin.items[:]:
+				item.undraw()
+			NetWin.update()
+		pCommandUnk = False
 		lineNum += 1
 		sStr = ""
 		if (command.find("service") != -1):
-			return
+			print("Found service!")
+			continue
 		elif (command.find("version") != -1): # Line is Version 
 			print("Found Version!")
 			sVer = command.split(" ")
@@ -393,6 +423,7 @@ def MapNetwork(NetWin, command, rType):
 				MyRouterInfo.append(sLineInfo + " " + sString)
 			else:
 				print("Unknown Password command!")
+				pCommandUnk = True
 				continue
 		elif (command.find("interface") != -1): # Line is creating interface
 			print("Found Interface!",)
@@ -411,6 +442,7 @@ def MapNetwork(NetWin, command, rType):
 				sIntType = "S"
 			else:
 				print("Unknown Interface Type!")
+				pCommandUnk = True
 				continue
 			# Find interface number
 			if (re.search("\d+/\d+(\.\d+)?$", command)): # Router is Modular and/or a sub interface
@@ -424,6 +456,7 @@ def MapNetwork(NetWin, command, rType):
 				iEndNum = len(command)
 			else:
 				print("Unknown Interface Number!")
+				pCommandUnk = True
 				continue
 				
 			for index in range(iStartNum, iEndNum, 1):
@@ -433,6 +466,7 @@ def MapNetwork(NetWin, command, rType):
 			MyRouterInterfaces.append(sInt)
 		else:
 			print("Unknown command!")
+			pCommandUnk = True
 			continue
 		# Draw items to screen
 		if (len(MyRouterInterfaces) > 0):
@@ -477,6 +511,11 @@ def MapNetwork(NetWin, command, rType):
 		
 		MyRouter = Rectangle(Point(WinWidth/2 - MyRouterWidth/2, WinHeight/2 - MyRouterHeight/2), Point(WinWidth/2 + MyRouterWidth/2, WinHeight/2 + MyRouterHeight/2))
 		MyRouter.draw(NetWin)
+		continue
+
+#=----------------------------------------=
+#=-   Calculate Interface Draw Location
+#=----------------------------------------=
 	
 def CalcIntDrawLocation(intNum, sIntName, lIntNumbers, lIntSize, lRouterSize, lWindowSize):
 	# lIntSize = [IntWidth(50), IntHeight(20), IntDefaultDistance(5)]
@@ -563,7 +602,10 @@ def CalcIntDrawLocation(intNum, sIntName, lIntNumbers, lIntSize, lRouterSize, lW
 		lDrawLocation.append(iRouterHeight)
 	print("iDrawLocation: " + str(lDrawLocation))
 	return lDrawLocation
-	
+
+#=------------------------------=
+#=-   Calculate Password Type
+#=------------------------------=
 def CalcMapPwdType(sCommand):
 	lCommand = sCommand.split(" ")
 	sNameIndex = 0
@@ -589,7 +631,11 @@ def CalcMapPwdType(sCommand):
 		
 	rString = sType + sPwd
 	return rString
-	
+
+
+#=---------------------=
+#=-   Subnetting
+#=---------------------=
 def Subnet(Network):
 	NetInfo = []
 	print("Network is: " + str(Network) + "\".")
@@ -717,6 +763,9 @@ def Subnet(Network):
 	NetInfo.append(iOctInt)
 	return NetInfo
 	
+#=---------------------=
+#=-   Summarization
+#=---------------------=
 def Summarize(Network):
 	print("Summarizing Network")
 	Network = re.split("\s|\.", Network)
@@ -800,6 +849,10 @@ def Summarize(Network):
 			break
 	return sSummarizedNet
 	
+#=-----------------------------=
+#=-   Reverse Summarization
+#=-----------------------------=
+	
 def rSummarize(sNetwork):
 	print("Reverse Summarizing Network")
 	sNetwork = re.split("/|\.", sNetwork)
@@ -854,7 +907,10 @@ def rSummarize(sNetwork):
 	Networks.append(MaxNet)
 	return Networks
 	
-	
+#=------------------------------------------------------=
+#=-   Calculate CIDR BitValue and Octet of Interest
+#=------------------------------------------------------=
+
 def CIDRInfoCalc(iCIDR):
 	info = []
 	iBitValue = 0
@@ -893,6 +949,9 @@ def CIDRInfoCalc(iCIDR):
 	info.append(intOctet)
 	return info
 
+#=----------------------------------=
+#=-   Convert CIDR to Subnet Mask
+#=----------------------------------=
 def CIDRtoNM(CIDR):
 	print("\t Converting CIDR to NM \"" + str(CIDR) + "\".")
 	iOctOfInt = 0
@@ -931,6 +990,10 @@ def CIDRtoNM(CIDR):
 		iNetMask += ".0"
 	return iNetMask
 	
+#=-----------------------------------=
+#=-   Convert Subnet Mask to CIDR
+#=-----------------------------------=
+
 def NMtoCIDR(NetMask):
 	global iCIDR
 	iOctOfInt = 0
@@ -967,28 +1030,6 @@ def NMtoCIDR(NetMask):
 		iCIDRNum =- 1
 		if (iBitValue == 2 ** num):
 			iCIDR = ((iCIDRNum) + ((iOctOfInt - 1) * 8))
-	""" Above for loop replaces
-	if (iBitValue == 128):
-		iCIDR = 1 + ((iOctOfInt - 1) * 8)
-	elif (iBitValue == 64):
-		iCIDR = 2 + ((iOctOfInt - 1) * 8)
-	elif (iBitValue == 32):
-		iCIDR = 3 + ((iOctOfInt - 1) * 8)
-	elif (iBitValue == 16):
-		iCIDR = 4 + ((iOctOfInt - 1) * 8)
-	elif (iBitValue == 8):
-		iCIDR = 5 + ((iOctOfInt - 1) * 8)
-	elif (iBitValue == 4):
-		iCIDR = 6 + ((iOctOfInt - 1) * 8)
-	elif (iBitValue == 2):
-		iCIDR = 7 + ((iOctOfInt - 1) * 8)
-	elif (iBitValue == 1):
-		iCIDR = (iOctOfInt * 8)
-	if (iCIDR == 0):
-		print("\t ERR: iCIDR Could not be set!")
-		return
-	else:
-	"""
 	return iCIDR
 	
 # Call Main Menu and start Script
