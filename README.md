@@ -1,5 +1,5 @@
 # py-proj
- Author: Devon Adams (https://github.com/devonadams)
+ Author: Anonoei (https://github.com/anonoei)
  License: GPLv3
  
  Sometimes I like to make things

@@ -6,7 +6,7 @@
 # =     M        M     X    MMM   M  M   MMMM    MMM    =
 # =                                                     =    
 # =======================================================
-# Author: Devon Adams (https://github.com/devonadams)
+# Author: Anonoei (https://github.com/anonoei)
 # License: GPLv3
 # This is a python graphical calculator
 #!/usr/bin python
